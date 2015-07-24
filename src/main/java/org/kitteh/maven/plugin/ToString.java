@@ -38,6 +38,7 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
@@ -59,6 +60,9 @@ public class ToString extends AbstractMojo {
 
     @Parameter(defaultValue = "false")
     private boolean toStringRequired;
+
+    @Parameter(defaultValue = "false")
+    private boolean toStringIgnoreUtilities;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -89,9 +93,10 @@ public class ToString extends AbstractMojo {
             try {
                 Method toString = clazz.getMethod("toString");
                 if (toString.getDeclaringClass().equals(Object.class)) {
+                    if (this.toStringIgnoreUtilities && isUtilityClass(clazz)) {
+                        continue;
+                    }
                     problematic.add(clazz.getName());
-                } else {
-                    this.getLog().info("Good work " + clazz.getSimpleName());
                 }
             } catch (NoSuchMethodException e) {
                 throw new MojoExecutionException("Could not find a toString at all on " + clazz.getName());
@@ -108,5 +113,22 @@ public class ToString extends AbstractMojo {
                 throw new MojoFailureException("All classes must have a toString not from Object");
             }
         }
+    }
+
+    private boolean isUtilityClass(Class<?> clazz) {
+        if (!(clazz.getSuperclass() == null || clazz.getSuperclass() == Object.class)) {
+            return false;
+        }
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (!Modifier.isStatic(method.getModifiers())) {
+                return false;
+            }
+        }
+        for (Field field : clazz.getDeclaredFields()) {
+            if (!(Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers()))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

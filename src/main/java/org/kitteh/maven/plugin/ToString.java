@@ -87,7 +87,7 @@ public class ToString extends AbstractMojo {
 
         List<String> problematic = new LinkedList<>();
         for (Class<?> clazz : allClasses) {
-            if ((clazz.getModifiers() & Modifier.INTERFACE) != 0) {
+            if ((clazz.getModifiers() & (Modifier.INTERFACE | Modifier.ABSTRACT)) != 0) {
                 continue;
             }
             try {
